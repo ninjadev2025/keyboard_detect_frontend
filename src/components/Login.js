@@ -81,7 +81,17 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
           setError(`Login failed: ${err.response.status} ${err.response.statusText}`);
         }
       } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
-        setError('Cannot connect to server. Please check the server URL and ensure the server is running.');
+        // Check if it's a CORS issue (HTTPS frontend trying to access HTTP server)
+        const isHttpsFrontend = window.location.protocol === 'https:';
+        const isHttpServer = serverUrlValue.startsWith('http://');
+        
+        if (isHttpsFrontend && isHttpServer) {
+          setError('CORS Error: Cannot connect to HTTP server from HTTPS site. The server must support HTTPS or be configured to allow CORS from this domain. Please contact the server administrator.');
+        } else {
+          setError('Cannot connect to server. Please check: 1) Server URL is correct, 2) Server is running, 3) Server allows CORS from this domain, 4) Firewall/network allows the connection.');
+        }
+      } else if (err.code === 'ERR_CERT' || err.message.includes('certificate')) {
+        setError('SSL Certificate Error: The server\'s SSL certificate is invalid or self-signed.');
       } else {
         setError('Login failed. Please try again.');
         console.error('Unexpected error:', err);
