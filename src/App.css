@@ -1,0 +1,35 @@
+.App {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.App header {
+  flex-shrink: 0;
+}
+
+.App main {
+  flex: 1;
+  overflow: auto;
+}
+
+/* Custom scrollbars */
+.App main::-webkit-scrollbar {
+  width: 12px;
+}
+
+.App main::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.App main::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 6px;
+  border: 2px solid #f8f9fa;
+}
+
+.App main::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
