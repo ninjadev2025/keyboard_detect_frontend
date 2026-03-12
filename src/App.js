@@ -136,7 +136,9 @@ function App() {
       // Provide more specific error messages
       let errorMessage = 'Connection failed. ';
       if (isHttpsFrontend && isHttpServer) {
-        errorMessage += 'HTTPS frontend cannot connect to HTTP server via Socket.IO. The server must support HTTPS or be configured to allow CORS for Socket.IO connections.';
+        errorMessage = '⚠️ HTTPS frontend cannot connect to HTTP server. ';
+        errorMessage += 'Solutions: 1) Enable HTTPS on your server, 2) Use a tunnel service (Cloudflare Tunnel/ngrok), ';
+        errorMessage += 'or 3) Access this app via HTTP (not recommended for production).';
       } else if (error.message) {
         errorMessage += error.message;
       } else {
@@ -146,6 +148,8 @@ function App() {
       setConnectionError(errorMessage);
       console.error('Connection error:', error);
       console.error('Socket options used:', socketOptions);
+      console.error('Frontend protocol:', window.location.protocol);
+      console.error('Server URL:', serverUrlToUse);
     });
 
     newSocket.on('disconnect', (reason) => {
