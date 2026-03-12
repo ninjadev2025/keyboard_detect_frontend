@@ -103,11 +103,25 @@ function App() {
     setLoading(true);
     setConnected(false);
 
-    const newSocket = io(serverUrlToUse + '/admin', {
-      transports: ['websocket', 'polling'],
+    // Check if we're on HTTPS trying to connect to HTTP
+    const isHttpsFrontend = window.location.protocol === 'https:';
+    const isHttpServer = serverUrlToUse.startsWith('http://');
+    
+    // Configure socket connection options
+    const socketOptions = {
       timeout: 10000,
-      reconnectionAttempts: 3
-    });
+      reconnectionAttempts: 3,
+      // For HTTPS → HTTP connections, use polling only (more compatible with CORS)
+      transports: (isHttpsFrontend && isHttpServer) ? ['polling'] : ['websocket', 'polling'],
+      // Allow credentials for CORS
+      withCredentials: false,
+      // Force new connection
+      forceNew: true
+    };
+
+    console.log('Connecting to socket:', serverUrlToUse + '/admin', socketOptions);
+
+    const newSocket = io(serverUrlToUse + '/admin', socketOptions);
 
     newSocket.on('connect', () => {
       setConnected(true);
@@ -118,8 +132,20 @@ function App() {
     newSocket.on('connect_error', (error) => {
       setLoading(false);
       setConnected(false);
-      setConnectionError('Connection failed. Please check the server URL and try again.');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Connection failed. ';
+      if (isHttpsFrontend && isHttpServer) {
+        errorMessage += 'HTTPS frontend cannot connect to HTTP server via Socket.IO. The server must support HTTPS or be configured to allow CORS for Socket.IO connections.';
+      } else if (error.message) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Please check the server URL and ensure the server is running and allows CORS.';
+      }
+      
+      setConnectionError(errorMessage);
       console.error('Connection error:', error);
+      console.error('Socket options used:', socketOptions);
     });
 
     newSocket.on('disconnect', (reason) => {
