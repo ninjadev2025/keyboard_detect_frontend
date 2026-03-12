@@ -106,7 +106,7 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
       <div className="login-card">
         <div className="login-header">
           <i className="fas fa-shield-alt fa-3x text-primary mb-3"></i>
-          <h2 className="mb-2">Admin Login</h2>
+          <h2 className="mb-2">Admin Login test</h2>
           <p className="text-muted">Enter your credentials to access the keyboard detection panel</p>
         </div>
 
