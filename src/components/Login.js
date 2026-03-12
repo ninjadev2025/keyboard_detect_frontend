@@ -22,14 +22,12 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
       return;
     }
 
-    // Get server URL from text field and construct login endpoint
+    // Get server URL from text field
     const serverUrlValue = serverUrl.trim();
-    let loginUrl;
+    
+    // Validate server URL format
     try {
-      // Ensure URL is properly formatted
-      const url = new URL(serverUrlValue);
-      loginUrl = `${url.origin}/api/admin/login`;
-      console.log('Login request to:', loginUrl);
+      new URL(serverUrlValue);
     } catch (err) {
       setError('Invalid server URL format. Please include http:// or https://');
       setLoading(false);
@@ -37,17 +35,37 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
     }
 
     try {
-      // Send login request to the server URL from text field
-      // Trim username and password to avoid whitespace issues
-      const loginData = {
-        username: username.trim(),
-        password: password.trim()
-      };
+      // Check if we're on Vercel (HTTPS) trying to access HTTP server
+      const isHttpsFrontend = window.location.protocol === 'https:';
+      const isHttpServer = serverUrlValue.startsWith('http://');
       
-      console.log('Sending login request to:', loginUrl);
-      console.log('Login data:', { username: loginData.username, password: '***' }); // Don't log actual password
+      // Use Vercel serverless function as proxy if HTTPS frontend accessing HTTP server
+      let loginUrl;
+      let requestData;
       
-      const response = await axios.post(loginUrl, loginData, {
+      if (isHttpsFrontend && isHttpServer) {
+        // Use Vercel proxy function
+        loginUrl = '/api/proxy';
+        requestData = {
+          serverUrl: serverUrlValue,
+          username: username.trim(),
+          password: password.trim()
+        };
+        console.log('Using Vercel proxy for HTTP server:', serverUrlValue);
+      } else {
+        // Direct request (both HTTPS or both HTTP)
+        const url = new URL(serverUrlValue);
+        loginUrl = `${url.origin}/api/admin/login`;
+        requestData = {
+          username: username.trim(),
+          password: password.trim()
+        };
+        console.log('Direct login request to:', loginUrl);
+      }
+      
+      console.log('Login data:', { username: requestData.username, password: '***' });
+      
+      const response = await axios.post(loginUrl, requestData, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -81,15 +99,7 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
           setError(`Login failed: ${err.response.status} ${err.response.statusText}`);
         }
       } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
-        // Check if it's a CORS issue (HTTPS frontend trying to access HTTP server)
-        const isHttpsFrontend = window.location.protocol === 'https:';
-        const isHttpServer = serverUrlValue.startsWith('http://');
-        
-        if (isHttpsFrontend && isHttpServer) {
-          setError('CORS Error: Cannot connect to HTTP server from HTTPS site. The server must support HTTPS or be configured to allow CORS from this domain. Please contact the server administrator.');
-        } else {
-          setError('Cannot connect to server. Please check: 1) Server URL is correct, 2) Server is running, 3) Server allows CORS from this domain, 4) Firewall/network allows the connection.');
-        }
+        setError('Cannot connect to server. Please check: 1) Server URL is correct, 2) Server is running, 3) Server allows connections, 4) Firewall/network allows the connection.');
       } else if (err.code === 'ERR_CERT' || err.message.includes('certificate')) {
         setError('SSL Certificate Error: The server\'s SSL certificate is invalid or self-signed.');
       } else {
@@ -106,7 +116,7 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
       <div className="login-card">
         <div className="login-header">
           <i className="fas fa-shield-alt fa-3x text-primary mb-3"></i>
-          <h2 className="mb-2">Admin Login test</h2>
+          <h2 className="mb-2">Admin Login</h2>
           <p className="text-muted">Enter your credentials to access the keyboard detection panel</p>
         </div>
 
