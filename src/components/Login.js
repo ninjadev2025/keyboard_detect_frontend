@@ -4,7 +4,6 @@ import { setAuthToken, setUsername as setStoredUsername } from '../utils/auth';
 import './Login.css';
 
 const Login = ({ onLoginSuccess, initialServerUrl }) => {
-  const [serverUrl, setServerUrl] = useState(initialServerUrl || 'http://localhost:5000');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -15,54 +14,18 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
     setError('');
     setLoading(true);
 
-    // Validate server URL
-    if (!serverUrl || !serverUrl.trim()) {
-      setError('Please enter a server URL');
-      setLoading(false);
-      return;
-    }
-
-    // Get server URL from text field
-    const serverUrlValue = serverUrl.trim();
-    
-    // Validate server URL format
-    try {
-      new URL(serverUrlValue);
-    } catch (err) {
-      setError('Invalid server URL format. Please include http:// or https://');
-      setLoading(false);
-      return;
-    }
+    // Use current origin since server and frontend run on same IP
+    const serverUrlValue = window.location.origin;
 
     try {
-      // Check if we're on Vercel (HTTPS) trying to access HTTP server
-      const isHttpsFrontend = window.location.protocol === 'https:';
-      const isHttpServer = serverUrlValue.startsWith('http://');
+      // Direct request to same origin
+      const loginUrl = '/api/admin/login';
+      const requestData = {
+        username: username.trim(),
+        password: password.trim()
+      };
       
-      // Use Vercel serverless function as proxy if HTTPS frontend accessing HTTP server
-      let loginUrl;
-      let requestData;
-      
-      if (isHttpsFrontend && isHttpServer) {
-        // Use Vercel proxy function
-        loginUrl = '/api/proxy';
-        requestData = {
-          serverUrl: serverUrlValue,
-          username: username.trim(),
-          password: password.trim()
-        };
-        console.log('Using Vercel proxy for HTTP server:', serverUrlValue);
-      } else {
-        // Direct request (both HTTPS or both HTTP)
-        const url = new URL(serverUrlValue);
-        loginUrl = `${url.origin}/api/admin/login`;
-        requestData = {
-          username: username.trim(),
-          password: password.trim()
-        };
-        console.log('Direct login request to:', loginUrl);
-      }
-      
+      console.log('Login request to:', loginUrl);
       console.log('Login data:', { username: requestData.username, password: '***' });
       
       const response = await axios.post(loginUrl, requestData, {
@@ -78,7 +41,7 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
         setStoredUsername(username);
         
         // Call success callback with server URL
-        onLoginSuccess(serverUrl.trim());
+        onLoginSuccess(serverUrlValue);
       } else {
         setError('Invalid response from server');
       }
@@ -99,7 +62,7 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
           setError(`Login failed: ${err.response.status} ${err.response.statusText}`);
         }
       } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
-        setError('Cannot connect to server. Please check: 1) Server URL is correct, 2) Server is running, 3) Server allows connections, 4) Firewall/network allows the connection.');
+        setError('Cannot connect to server. Please check: 1) Server is running, 2) Server allows connections, 3) Firewall/network allows the connection.');
       } else if (err.code === 'ERR_CERT' || err.message.includes('certificate')) {
         setError('SSL Certificate Error: The server\'s SSL certificate is invalid or self-signed.');
       } else {
@@ -129,25 +92,6 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
           )}
 
           <div className="mb-3">
-            <label htmlFor="serverUrl" className="form-label">
-              <i className="fas fa-server me-2"></i>Server URL
-            </label>
-            <input
-              type="text"
-              className="form-control"
-              id="serverUrl"
-              value={serverUrl}
-              onChange={(e) => setServerUrl(e.target.value)}
-              placeholder="http://localhost:5000"
-              required
-              disabled={loading}
-            />
-            <small className="form-text text-muted">
-              Enter the backend server URL (e.g., http://localhost:5000)
-            </small>
-          </div>
-
-          <div className="mb-3">
             <label htmlFor="username" className="form-label">
               <i className="fas fa-user me-2"></i>Username
             </label>
@@ -161,6 +105,7 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
               required
               autoFocus
               disabled={loading}
+              autoComplete="username"
             />
           </div>
 
@@ -177,6 +122,7 @@ const Login = ({ onLoginSuccess, initialServerUrl }) => {
               placeholder="Enter password"
               required
               disabled={loading}
+              autoComplete="current-password"
             />
           </div>
 
